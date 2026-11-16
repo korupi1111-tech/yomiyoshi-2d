@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>甲府城 2D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a1a;overflow:hidden;font-family:sans-serif;touch-action:none}
+canvas{display:block}
+#hud{position:fixed;top:8px;left:8px;color:#eee;font-size:13px;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:6px;pointer-events:none;line-height:1.5;z-index:10}
+#joy{position:fixed;bottom:24px;left:24px;width:120px;height:120px;border-radius:60px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);touch-action:none;z-index:10}
+#joy .knob{position:absolute;width:48px;height:48px;border-radius:24px;background:rgba(255,255,255,.5);left:36px;top:36px;pointer-events:none}
+#enter{position:fixed;bottom:24px;right:24px;padding:14px 22px;background:rgba(255,204,0,.9);color:#3a2e00;font-size:18px;font-weight:bold;border:none;border-radius:10px;z-index:11;display:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">読み込み中…</div>
+<div id="joy"><div class="knob"></div></div>
+<button id="enter">入る</button>
+<script>
+const GRID = 28;
+const BG_SRC = "data:image/png;base64,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";
+const BLOCKS = [[14, 7], [3, 8], [4, 8], [19, 9], [24, 10], [26, 10], [4, 11], [26, 11], [11, 12], [12, 12], [13, 12], [14, 12], [24, 12], [11, 13], [13, 13], [14, 13], [4, 14], [11, 14], [2, 15], [4, 15], [11, 15], [26, 15], [3, 16], [11, 16], [23, 16], [24, 16], [14, 17], [24, 18], [26, 18], [26, 19], [23, 20], [24, 20], [26, 20], [14, 21], [26, 22], [22, 23], [24, 23], [26, 23], [6, 24], [18, 24], [23, 24], [2, 26], [7, 26], [11, 26], [12, 26], [15, 26], [20, 26], [12, 27], [16, 27], [26, 27]];      // 通れないマス [x,y,...]
+const ENTERABLE = [{"x": 2, "y": 8, "type": "宿屋"}, {"x": 23, "y": 8, "type": "宿屋"}, {"x": 24, "y": 8, "type": "商家"}, {"x": 26, "y": 8, "type": "商家"}, {"x": 4, "y": 10, "type": "商家"}, {"x": 23, "y": 10, "type": "宿屋"}, {"x": 2, "y": 11, "type": "宿屋"}, {"x": 24, "y": 11, "type": "宿屋"}, {"x": 23, "y": 12, "type": "宿屋"}, {"x": 2, "y": 14, "type": "宿屋"}, {"x": 23, "y": 14, "type": "商家"}, {"x": 24, "y": 14, "type": "商家"}, {"x": 26, "y": 14, "type": "宿屋"}, {"x": 13, "y": 15, "type": "御殿"}, {"x": 24, "y": 15, "type": "宿屋"}, {"x": 2, "y": 16, "type": "商家"}, {"x": 4, "y": 16, "type": "商家"}, {"x": 26, "y": 16, "type": "商家"}, {"x": 3, "y": 18, "type": "商家"}, {"x": 4, "y": 18, "type": "宿屋"}, {"x": 23, "y": 18, "type": "商家"}, {"x": 2, "y": 19, "type": "商家"}, {"x": 4, "y": 19, "type": "民家"}, {"x": 9, "y": 19, "type": "御殿"}, {"x": 24, "y": 19, "type": "商家"}, {"x": 2, "y": 20, "type": "宿屋"}, {"x": 3, "y": 20, "type": "宿屋"}, {"x": 4, "y": 20, "type": "宿屋"}, {"x": 4, "y": 22, "type": "民家"}, {"x": 24, "y": 22, "type": "宿屋"}, {"x": 4, "y": 23, "type": "商家"}, {"x": 6, "y": 23, "type": "商家"}, {"x": 8, "y": 23, "type": "商家"}, {"x": 10, "y": 23, "type": "宿屋"}, {"x": 15, "y": 23, "type": "商家"}, {"x": 16, "y": 23, "type": "宿屋"}, {"x": 18, "y": 23, "type": "宿屋"}, {"x": 4, "y": 24, "type": "商家"}, {"x": 7, "y": 24, "type": "商家"}, {"x": 8, "y": 24, "type": "宿屋"}, {"x": 10, "y": 24, "type": "宿屋"}, {"x": 11, "y": 24, "type": "商家"}, {"x": 15, "y": 24, "type": "宿屋"}, {"x": 16, "y": 24, "type": "商家"}, {"x": 19, "y": 24, "type": "宿屋"}, {"x": 20, "y": 24, "type": "商家"}, {"x": 22, "y": 24, "type": "商家"}, {"x": 24, "y": 24, "type": "宿屋"}, {"x": 6, "y": 26, "type": "宿屋"}, {"x": 16, "y": 26, "type": "宿屋"}, {"x": 18, "y": 26, "type": "民家"}, {"x": 22, "y": 26, "type": "宿屋"}, {"x": 23, "y": 26, "type": "宿屋"}, {"x": 26, "y": 26, "type": "宿屋"}, {"x": 2, "y": 27, "type": "民家"}, {"x": 4, "y": 27, "type": "民家"}, {"x": 6, "y": 27, "type": "商家"}, {"x": 8, "y": 27, "type": "商家"}, {"x": 10, "y": 27, "type": "宿屋"}, {"x": 15, "y": 27, "type": "宿屋"}, {"x": 18, "y": 27, "type": "民家"}, {"x": 22, "y": 27, "type": "宿屋"}, {"x": 24, "y": 27, "type": "商家"}]; // 進入可能な建物 [{x,y,type},...]
+
+let px = 14, py = 22, dir = 'down';
+let keys = {};
+let inside = null;
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const bg = new Image();
+const enterBtn = document.getElementById('enter');
+bg.onload = () => {
+  document.getElementById('hud').innerHTML = '甲府城 2D<br>矢印/WASD移動、Eキーで建物に入る';
+  requestAnimationFrame(loop);
+};
+bg.src = BG_SRC;
+
+const blockSet = new Set(BLOCKS.map(b => b[1]*GRID + b[0]));
+const enterMap = {};
+for(const b of ENTERABLE){ enterMap[b.y*GRID + b.x] = b; }
+
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()]=true;
+  if(e.key.startsWith('Arrow')) e.preventDefault();
+  if(e.key==='e' || e.key==='E'){ enterBtn.click(); }
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()]=false; });
+
+const joy = document.getElementById('joy');
+const knob = joy.querySelector('.knob');
+let joyActive=false, joyDX=0, joyDY=0;
+joy.addEventListener('touchstart', e=>{e.preventDefault();joyActive=true;});
+joy.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  const r=joy.getBoundingClientRect();
+  let dx=e.touches[0].clientX-(r.left+r.width/2), dy=e.touches[0].clientY-(r.top+r.height/2);
+  const m=Math.hypot(dx,dy), max=36;
+  if(m>max){dx=dx/m*max;dy=dy/m*max;}
+  knob.style.left=(36+dx)+'px'; knob.style.top=(36+dy)+'px';
+  joyDX=dx/max; joyDY=dy/max;
+});
+joy.addEventListener('touchend', e=>{joyActive=false;joyDX=0;joyDY=0;knob.style.left='36px';knob.style.top='36px';});
+
+function blocked(x, y){
+  const ix=Math.round(x), iy=Math.round(y);
+  if(ix<0||ix>=GRID||iy<0||iy>=GRID) return true;
+  return blockSet.has(iy*GRID+ix);
+}
+function nearEnterable(){
+  const ix=Math.round(px), iy=Math.round(py);
+  for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+    const k=(iy+dy)*GRID+(ix+dx);
+    if(enterMap[k]) return enterMap[k];
+  }
+  return null;
+}
+enterBtn.addEventListener('click', ()=>{
+  if(inside){ inside=null; } else {
+    const b=nearEnterable(); if(b){ inside={b}; px=b.x; py=b.y; }
+  }
+});
+
+function draw(){
+  if(inside){
+    ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#c8b98a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle='#7a5f3c'; ctx.lineWidth=3;
+    const cols=3,rows=2,cw=canvas.width/cols,ch=canvas.height/rows;
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      ctx.strokeRect(c*cw,r*ch,cw,ch);
+      ctx.fillStyle='#7a5f3c'; ctx.font='18px sans-serif';
+      ctx.fillText((c===0?'入口':'部屋')+(r*cols+c),c*cw+12,r*ch+28);
+    }
+    ctx.fillStyle='#fff'; ctx.font='18px sans-serif';
+    ctx.fillText('【'+(inside.b.type)+'】内部',16,30);
+    const spx=canvas.width/2,spy=canvas.height/2;
+    ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(spx,spy,10,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#7a5a00'; ctx.lineWidth=2.5; ctx.stroke();
+    enterBtn.style.display='block'; enterBtn.textContent='出る';
+  } else {
+    ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    const scale=Math.min(canvas.width/(GRID*22), canvas.height/(GRID*22));
+    const ox=(canvas.width-GRID*22*scale)/2, oy=(canvas.height-GRID*22*scale)/2;
+    ctx.drawImage(bg, ox, oy, GRID*22*scale, GRID*22*scale);
+    const spx=ox+px*22*scale, spy=oy+py*22*scale;
+    ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(spx,spy,Math.max(7,22*scale*0.45),0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#7a5a00'; ctx.lineWidth=2.5; ctx.stroke();
+    const nb=nearEnterable();
+    enterBtn.style.display=nb?'block':'none'; enterBtn.textContent='入る';
+  }
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,0.05); last=now;
+  let mx=0,my=0;
+  if(keys['arrowleft']||keys['a'])mx-=1;
+  if(keys['arrowright']||keys['d'])mx+=1;
+  if(keys['arrowup']||keys['w'])my-=1;
+  if(keys['arrowdown']||keys['s'])my+=1;
+  if(joyActive){mx+=joyDX;my+=joyDY;}
+  if(mx||my){
+    const m=Math.hypot(mx,my); mx/=m; my/=m;
+    const speed=6; const nx=px+mx*speed*dt, ny=py+my*speed*dt;
+    if(!inside){
+      if(!blocked(nx,py))px=nx;
+      if(!blocked(px,ny))py=ny;
+    }
+    if(Math.abs(mx)>Math.abs(my))dir=mx>0?'right':'left'; else dir=my>0?'down':'up';
+  }
+  draw(); requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

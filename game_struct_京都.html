@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>京都 2D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a1a;overflow:hidden;font-family:sans-serif;touch-action:none}
+canvas{display:block}
+#hud{position:fixed;top:8px;left:8px;color:#eee;font-size:13px;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:6px;pointer-events:none;line-height:1.5;z-index:10}
+#joy{position:fixed;bottom:24px;left:24px;width:120px;height:120px;border-radius:60px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);touch-action:none;z-index:10}
+#joy .knob{position:absolute;width:48px;height:48px;border-radius:24px;background:rgba(255,255,255,.5);left:36px;top:36px;pointer-events:none}
+#enter{position:fixed;bottom:24px;right:24px;padding:14px 22px;background:rgba(255,204,0,.9);color:#3a2e00;font-size:18px;font-weight:bold;border:none;border-radius:10px;z-index:11;display:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">読み込み中…</div>
+<div id="joy"><div class="knob"></div></div>
+<button id="enter">入る</button>
+<script>
+const GRID = 30;
+const BG_SRC = "data:image/png;base64,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";
+const BLOCKS = [[3, 8], [6, 8], [15, 8], [26, 8], [27, 8], [20, 10], [2, 11], [4, 11], [26, 11], [4, 12], [6, 12], [26, 12], [12, 13], [13, 13], [14, 13], [15, 13], [2, 14], [12, 14], [14, 14], [15, 14], [27, 14], [2, 15], [4, 15], [12, 15], [3, 16], [6, 16], [12, 16], [26, 16], [12, 17], [3, 18], [15, 18], [26, 18], [6, 19], [26, 19], [3, 20], [27, 20], [15, 22], [26, 22], [27, 22], [26, 23], [7, 24], [11, 24], [16, 24], [18, 24], [22, 24], [26, 24], [3, 26], [20, 26], [22, 26], [23, 26], [6, 28], [8, 28], [11, 28], [16, 28], [18, 28], [27, 28]];      // 通れないマス [x,y,...]
+const ENTERABLE = [{"x": 2, "y": 8, "type": "民家"}, {"x": 24, "y": 8, "type": "寺社"}, {"x": 2, "y": 10, "type": "武家屋敷"}, {"x": 6, "y": 10, "type": "商家"}, {"x": 24, "y": 10, "type": "商家"}, {"x": 27, "y": 10, "type": "商家"}, {"x": 28, "y": 10, "type": "商家"}, {"x": 6, "y": 11, "type": "宿屋"}, {"x": 24, "y": 11, "type": "商家"}, {"x": 3, "y": 12, "type": "商家"}, {"x": 24, "y": 12, "type": "民家"}, {"x": 4, "y": 14, "type": "民家"}, {"x": 6, "y": 14, "type": "武家屋敷"}, {"x": 24, "y": 14, "type": "宿屋"}, {"x": 26, "y": 14, "type": "寺社"}, {"x": 28, "y": 14, "type": "宿屋"}, {"x": 6, "y": 15, "type": "商家"}, {"x": 24, "y": 15, "type": "武家屋敷"}, {"x": 26, "y": 15, "type": "宿屋"}, {"x": 2, "y": 16, "type": "商家"}, {"x": 4, "y": 16, "type": "武家屋敷"}, {"x": 14, "y": 16, "type": "御殿"}, {"x": 27, "y": 16, "type": "寺社"}, {"x": 28, "y": 16, "type": "民家"}, {"x": 4, "y": 18, "type": "商家"}, {"x": 6, "y": 18, "type": "商家"}, {"x": 28, "y": 18, "type": "武家屋敷"}, {"x": 4, "y": 19, "type": "民家"}, {"x": 24, "y": 19, "type": "寺社"}, {"x": 4, "y": 20, "type": "寺社"}, {"x": 6, "y": 20, "type": "宿屋"}, {"x": 10, "y": 20, "type": "御殿"}, {"x": 26, "y": 20, "type": "商家"}, {"x": 28, "y": 20, "type": "宿屋"}, {"x": 4, "y": 22, "type": "武家屋敷"}, {"x": 6, "y": 22, "type": "商家"}, {"x": 24, "y": 22, "type": "商家"}, {"x": 2, "y": 23, "type": "寺社"}, {"x": 4, "y": 23, "type": "商家"}, {"x": 24, "y": 23, "type": "民家"}, {"x": 2, "y": 24, "type": "寺社"}, {"x": 3, "y": 24, "type": "寺社"}, {"x": 4, "y": 24, "type": "商家"}, {"x": 6, "y": 24, "type": "民家"}, {"x": 10, "y": 24, "type": "商家"}, {"x": 19, "y": 24, "type": "民家"}, {"x": 23, "y": 24, "type": "寺社"}, {"x": 24, "y": 24, "type": "武家屋敷"}, {"x": 27, "y": 24, "type": "寺社"}, {"x": 2, "y": 26, "type": "民家"}, {"x": 4, "y": 26, "type": "武家屋敷"}, {"x": 6, "y": 26, "type": "商家"}, {"x": 7, "y": 26, "type": "武家屋敷"}, {"x": 16, "y": 26, "type": "商家"}, {"x": 19, "y": 26, "type": "商家"}, {"x": 24, "y": 26, "type": "商家"}, {"x": 27, "y": 26, "type": "武家屋敷"}, {"x": 28, "y": 26, "type": "民家"}, {"x": 2, "y": 27, "type": "寺社"}, {"x": 10, "y": 27, "type": "商家"}, {"x": 12, "y": 27, "type": "商家"}, {"x": 14, "y": 27, "type": "商家"}, {"x": 22, "y": 27, "type": "民家"}, {"x": 24, "y": 27, "type": "寺社"}, {"x": 26, "y": 27, "type": "宿屋"}, {"x": 4, "y": 28, "type": "宿屋"}, {"x": 7, "y": 28, "type": "寺社"}, {"x": 10, "y": 28, "type": "武家屋敷"}, {"x": 12, "y": 28, "type": "寺社"}, {"x": 14, "y": 28, "type": "武家屋敷"}, {"x": 20, "y": 28, "type": "商家"}, {"x": 22, "y": 28, "type": "武家屋敷"}, {"x": 23, "y": 28, "type": "民家"}, {"x": 24, "y": 28, "type": "宿屋"}, {"x": 26, "y": 28, "type": "寺社"}, {"x": 28, "y": 28, "type": "宿屋"}]; // 進入可能な建物 [{x,y,type},...]
+
+let px = 15, py = 23, dir = 'down';
+let keys = {};
+let inside = null;
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const bg = new Image();
+const enterBtn = document.getElementById('enter');
+bg.onload = () => {
+  document.getElementById('hud').innerHTML = '京都 2D<br>矢印/WASD移動、Eキーで建物に入る';
+  requestAnimationFrame(loop);
+};
+bg.src = BG_SRC;
+
+const blockSet = new Set(BLOCKS.map(b => b[1]*GRID + b[0]));
+const enterMap = {};
+for(const b of ENTERABLE){ enterMap[b.y*GRID + b.x] = b; }
+
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()]=true;
+  if(e.key.startsWith('Arrow')) e.preventDefault();
+  if(e.key==='e' || e.key==='E'){ enterBtn.click(); }
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()]=false; });
+
+const joy = document.getElementById('joy');
+const knob = joy.querySelector('.knob');
+let joyActive=false, joyDX=0, joyDY=0;
+joy.addEventListener('touchstart', e=>{e.preventDefault();joyActive=true;});
+joy.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  const r=joy.getBoundingClientRect();
+  let dx=e.touches[0].clientX-(r.left+r.width/2), dy=e.touches[0].clientY-(r.top+r.height/2);
+  const m=Math.hypot(dx,dy), max=36;
+  if(m>max){dx=dx/m*max;dy=dy/m*max;}
+  knob.style.left=(36+dx)+'px'; knob.style.top=(36+dy)+'px';
+  joyDX=dx/max; joyDY=dy/max;
+});
+joy.addEventListener('touchend', e=>{joyActive=false;joyDX=0;joyDY=0;knob.style.left='36px';knob.style.top='36px';});
+
+function blocked(x, y){
+  const ix=Math.round(x), iy=Math.round(y);
+  if(ix<0||ix>=GRID||iy<0||iy>=GRID) return true;
+  return blockSet.has(iy*GRID+ix);
+}
+function nearEnterable(){
+  const ix=Math.round(px), iy=Math.round(py);
+  for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+    const k=(iy+dy)*GRID+(ix+dx);
+    if(enterMap[k]) return enterMap[k];
+  }
+  return null;
+}
+enterBtn.addEventListener('click', ()=>{
+  if(inside){ inside=null; } else {
+    const b=nearEnterable(); if(b){ inside={b}; px=b.x; py=b.y; }
+  }
+});
+
+function draw(){
+  if(inside){
+    ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#c8b98a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle='#7a5f3c'; ctx.lineWidth=3;
+    const cols=3,rows=2,cw=canvas.width/cols,ch=canvas.height/rows;
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      ctx.strokeRect(c*cw,r*ch,cw,ch);
+      ctx.fillStyle='#7a5f3c'; ctx.font='18px sans-serif';
+      ctx.fillText((c===0?'入口':'部屋')+(r*cols+c),c*cw+12,r*ch+28);
+    }
+    ctx.fillStyle='#fff'; ctx.font='18px sans-serif';
+    ctx.fillText('【'+(inside.b.type)+'】内部',16,30);
+    const spx=canvas.width/2,spy=canvas.height/2;
+    ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(spx,spy,10,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#7a5a00'; ctx.lineWidth=2.5; ctx.stroke();
+    enterBtn.style.display='block'; enterBtn.textContent='出る';
+  } else {
+    ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    const scale=Math.min(canvas.width/(GRID*22), canvas.height/(GRID*22));
+    const ox=(canvas.width-GRID*22*scale)/2, oy=(canvas.height-GRID*22*scale)/2;
+    ctx.drawImage(bg, ox, oy, GRID*22*scale, GRID*22*scale);
+    const spx=ox+px*22*scale, spy=oy+py*22*scale;
+    ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(spx,spy,Math.max(7,22*scale*0.45),0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#7a5a00'; ctx.lineWidth=2.5; ctx.stroke();
+    const nb=nearEnterable();
+    enterBtn.style.display=nb?'block':'none'; enterBtn.textContent='入る';
+  }
+}
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,0.05); last=now;
+  let mx=0,my=0;
+  if(keys['arrowleft']||keys['a'])mx-=1;
+  if(keys['arrowright']||keys['d'])mx+=1;
+  if(keys['arrowup']||keys['w'])my-=1;
+  if(keys['arrowdown']||keys['s'])my+=1;
+  if(joyActive){mx+=joyDX;my+=joyDY;}
+  if(mx||my){
+    const m=Math.hypot(mx,my); mx/=m; my/=m;
+    const speed=6; const nx=px+mx*speed*dt, ny=py+my*speed*dt;
+    if(!inside){
+      if(!blocked(nx,py))px=nx;
+      if(!blocked(px,ny))py=ny;
+    }
+    if(Math.abs(mx)>Math.abs(my))dir=mx>0?'right':'left'; else dir=my>0?'down':'up';
+  }
+  draw(); requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
